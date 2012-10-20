@@ -1,5 +1,5 @@
 CC=g++
-SOURCES=src/main.cpp src/region.cpp
+SOURCES=src/main.cpp src/region.cpp src/timestamp.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=welog
 
@@ -14,3 +14,5 @@ clean:
 emacs-clean:
 	-rm -f src/*~
 	-rm -f src/#*#
+	-rm -f *~
+	-rm -f #*#
