@@ -1,9 +1,0 @@
-WorldEdit command logging must be enabled first!
-Before running, you need to generate a compatible log file. The following
- command does this, assuming the current directory is of your server:
- 
-  echo "`cat server.log | grep "WorldEdit: " | cut -c 39-`" > welog.log 
-
-Then you may use WELog by running: 
-
-  ./welog welog.log superflat
