@@ -25,72 +25,136 @@
 #include <string>
 #include <vector>
 #include "region.h"
+#include "timestamp.h"
 using namespace std;
-  vector<Region> regions;
-//long lineCount(string file);
+vector<Region> regions;
 void commandLoop();
 void runCommand(string command);
 int main(int argc, char* argv[]) {
-  if (argc < 3) {
-    cout << "Usage: " << argv[0] << " <logfile> <worldname> [command]" << endl;
+  if (argc < 2) {
+    cout << "Usage: " << argv[0] << " <server.log>" << endl;
     return 1;
   }
   char interactive;
-  if (argc == 4) { 
+  if (argc == 3) { 
     interactive = 0;
   } else {
     interactive = 1;
-    /*  cout << "WELog  Copyright (C) 2012  Connor Monahan" << endl;
-    cout << "This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'." << endl;
-    cout << "This is free software, and you are welcome to redistribute it" << endl;
-    cout << "under certain conditions; type `show c' for details." << endl;
-*/  }
+    cout << "Loading log file (this may take a while)" << endl;
+  }
   std::string line;
   std::ifstream text (argv[1]);
   int regionnum = 0;
+  int success = 0;
   if (text.is_open()) {
-    while (text.good()) {
+    while (text.good()) { // Read file line by line
       getline(text,line);
-      float x1 = 0, x2 = 0, y1 = 0, y2 = 0, z1 = 0, z2 = 0;
-      char plr[16] = "npe", mat[50] = "";
-      stringstream read;
-      read << "%s (in \"" << argv[2] << "\"): /set %s - Region: (%f, %f, %f) - (%f, %f, %f)";
-      sscanf (line.c_str(), read.str().c_str(), plr, mat, &x1, &y1, &z1, &x2, &y2, &z2);
-      if ((x1+x2+y1+y2+z1+z2) != 0) {
-	Location one, two;
-	one.x = x1; one.y = y1; one.z = z1;
-	two.x = x2; two.y = y2; two.z = z2;
-	stringstream ss; ss << plr << " set to material " << mat;
-	Region reg(ss.str(), one, two);
-	regions.push_back(reg);
-	//cout << regionnum++ << ": Player "<<plr<<" set "<<mat<<" at " << x1 << ' ' << y1 << ' ' << z1 << "   " << x2 << ' ' << y2 << ' ' << z2 << endl;
+      float x1 = 0, x2 = 0, y1 = 0, y2 = 0, z1 = 0, z2 = 0; // Region corners
+      int year = 0, month = 0, day = 0, hour = 0, min = 0, sec = 0; // Time
+      char player[16] = "none", mat[50] = "none", mat2[50] = "none", world[32] = "world"; // Things
+      //Replace              Time                             Player      World       Material           Corner 1       Corner 2
+      sscanf (line.c_str(), "%d-%d-%d %d:%d:%d [INFO] WorldEdit: %s (in \"%[^\"]\"): /replace %s %s - Region: (%f, %f, %f) - (%f, %f, %f)", 
+	      &year, &month, &day, &hour, &min, &sec, player, world, mat, mat2, &x1, &y1, &z1, &x2, &y2, &z2);
+      if (strstr(mat2, "none") == NULL) { // It is replace
+	if ((x1+x2+y1+y2+z1+z2) != 0) {
+	  success = 1;
+	  Location one, two;
+	  one.x = x1; one.y = y1; one.z = z1;
+	  two.x = x2; two.y = y2; two.z = z2;
+	  Timestamp ts;
+	  ts.year = year; ts.month = month; ts.day = day;
+	  ts.hour = hour; ts.min = min; ts.sec = sec;
+	  stringstream op; op << "replaced " << mat << " with " << mat2;
+	  Region reg(world, player, op.str(), ts, one, two);
+	  regions.push_back(reg);
+	}
+	continue;
+      }
+      //Set                  Time                             Player      World       Material           Corner 1       Corner 2
+      sscanf (line.c_str(), "%d-%d-%d %d:%d:%d [INFO] WorldEdit: %s (in \"%[^\"]\"): /set %s - Region: (%f, %f, %f) - (%f, %f, %f)", 
+	      &year, &month, &day, &hour, &min, &sec, player, world, mat, &x1, &y1, &z1, &x2, &y2, &z2);
+      if (strstr(mat, "none") == NULL) { // It is set      
+	if ((x1+x2+y1+y2+z1+z2) != 0) {
+	  success = 1;
+	  Location one, two;
+	  one.x = x1; one.y = y1; one.z = z1;
+	  two.x = x2; two.y = y2; two.z = z2;
+	  Timestamp ts;
+	  ts.year = year; ts.month = month; ts.day = day;
+	  ts.hour = hour; ts.min = min; ts.sec = sec;
+	  stringstream op; op << " set to material " << mat;
+	  Region reg(world, player, op.str(), ts, one, two);
+	  regions.push_back(reg);
+	}
+	continue;
       }
     }
     text.close();
+    if (!success) {
+      cerr << "Could not find any WorldEdit commands in the file (it should be your regular server log file). " <<
+	"Have you enabled WorldEdit command logging in the configuration? (plugins/WorldEdit/config.yml)" << endl;
+      return 1;
+    }
     if (interactive) commandLoop();
     if (!interactive) runCommand(argv[3]);
-    if (interactive) cout << "Final memory: " << sizeof(regions) << " bytes" << endl;
+    //if (interactive) cout << "Final memory: " << sizeof(regions) << " bytes" << endl;
+    return 0;
   } else {
-    std::cout << "Unable to open file" << std::endl << std::endl;
+    cerr << "Unable to open the file " << argv[1] << "." << endl;
   }
 }
 void commandLoop() {
-  char active = 1;
-  while (active) {
+  cout << "Loaded in " << ((float)clock())/CLOCKS_PER_SEC << " seconds" << endl;
+  while (1) {
+    cout << "Continue (y/n, default y)> ";
+    char opt[16] = "y";
+    scanf("%s", opt);
+    if (strcmp(opt, "n") == 0) {
+      break;
+    }
+    cout << "World> ";
+    char world[16] = "none";
+    scanf("%s", world);
+    if (strcmp(world, "none") == 0) {
+      cout << "Bad input" << endl;
+      continue;
+    }
+    cout << "Player> ";
+    char player[16] = "none";
+    scanf("%s", player);
+    if (strcmp(player, "none") == 0) {
+      cout << "Bad input" << endl;
+      continue;
+    }
     cout << "X Y Z> ";
     float x = 1234, y = 5678, z = 9101;
     scanf("%f %f %f", &x, &y, &z);
-    //    cin >> x; cout << "Y> "; cin >> y; cout << "Z> "; cin >> z;
-    if ((x == 1234) && (y == 5678) && (z == 9101)) {
-      cout << "Bad input, guessing that means exit..." << endl;
-      return;
+    if (x+y+z == 16013) {
+      cout << "Bad input" << endl;
+      continue;
     }
-    cout << endl << "Searching at X" << x << " Y"<<y<<" Z"<<z<<"..."<<endl; 
+    // cout << "Radius> ";
+    // int radius = 0;
+    // scanf("%d", &radius);
+    // if (radius == 0) {
+    //   cout << "Bad input" << endl;
+    //   continue;
+    // }
+    // TODO: add time option
+    // cout << "Time (amount space days/hours/minutes)> ";
+    // int radius = 0;
+    // char unit[16] = "none";
+    // scanf("%d %s", &radius);
+    // if (radius == 0 || strcmp(unit, "none") == 0) {
+    //   cout << "Bad input" << endl;
+    //   continue;
+    // }
+    cout << "Searching..." << endl; 
     Location loc; loc.x = x; loc.y = y; loc.z = z;
     for (int i = 0; i < regions.size(); i++) {
       Region reg = regions.at(i);
       if (reg.hasLocation(loc)) {
-	cout << reg.world << endl;
+	cout << ts2str(reg.ts) << "  (in " << reg.world << ") " << reg.player << " " << reg.operation << endl;
       }
     }
   }
@@ -109,17 +173,3 @@ void runCommand(std::string cmd) {
     }
   }
 }
-/*
-long lineCount(string file) {
-  std::ifstream text (file);
-  int lc = 0;
-  string line;
-  if (text.is_open()) {
-    while (text.good()) {
-      getline(text,line);
-      lc++;
-    }
-  }
-  return lc;
-}
-*/

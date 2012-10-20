@@ -16,9 +16,13 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "region.h"
+#include "timestamp.h"
 #include <iostream>
-Region::Region(std::string world, Location one, Location two) {
+Region::Region(std::string world, std::string player, std::string operation, Timestamp ts, Location one, Location two) {
   this->world = world;
+  this->player = player;
+  this->operation = operation;
+  this->ts = ts;
   this->one = one;
   this->two = two;
   //  std::cout << one.x << ' ' << two.x << std::endl;

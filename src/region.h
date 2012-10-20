@@ -18,6 +18,7 @@
 #ifndef WELOG_REGION_H
 #define WELOG_REGION_H
 #include <string>
+#include "timestamp.h"
 struct Location {
   std::string world;
   int x;
@@ -27,9 +28,12 @@ struct Location {
 class Region {
  public:
   std::string world;
+  std::string player;
+  std::string operation;
+  Timestamp ts;
   Location one;
   Location two;
-  Region(std::string world, Location one, Location two);
+  Region(std::string world, std::string player, std::string operation, Timestamp ts, Location one, Location two);
   char hasLocation(Location loc);
   Location getMinXBlock();
   Location getMinYBlock();
@@ -46,7 +50,5 @@ class Region {
   int getSizeX();
   int getSizeY();
   int getSizeZ();
-  
-
 };
 #endif
