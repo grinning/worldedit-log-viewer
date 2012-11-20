@@ -56,11 +56,13 @@ int main(int argc, char* argv[]) {
       sscanf (line.c_str(), "%d-%d-%d %d:%d:%d [INFO] WorldEdit: %s (in \"%[^\"]\"): /replace %s %s - Region: (%f, %f, %f) - (%f, %f, %f)", 
 	      &year, &month, &day, &hour, &min, &sec, player, world, mat, mat2, &x1, &y1, &z1, &x2, &y2, &z2);
       if (strstr(mat2, "none") == NULL) { // It is replace
-	if ((x1+x2+y1+y2+z1+z2) != 0) {
+      if(__builtin_expect((x1+x2+y1+y2+z1+z2) != 0, 0)) {
 	  success = 1;
 	  Location one, two;
 	  one.x = x1; one.y = y1; one.z = z1;
 	  two.x = x2; two.y = y2; two.z = z2;
+      __builtin_prefetch(&one, 1, 1);
+      __builtin_prefetch(&two, 1, 1);
 	  Timestamp ts;
 	  ts.year = year; ts.month = month; ts.day = day;
 	  ts.hour = hour; ts.min = min; ts.sec = sec;
@@ -108,6 +110,7 @@ void commandLoop() {
   while (1) {
     cout << "Continue (y/n, default y)> ";
     char opt[16] = "y";
+    __builtin_prefetch(opt);
     scanf("%s", opt);
     if (strcmp(opt, "n") == 0) {
       break;
@@ -162,7 +165,7 @@ void commandLoop() {
 void runCommand(std::string cmd) {
   float x = 1234, y = 5678, z = 9101;
   sscanf(cmd.c_str(), "%f %f %f", &x, &y, &z);
-  if ((x == 1234) && (y == 5678) && (z == 9101)) {
+  if (__builtin_expect((x == 1234) && (y == 5678) && (z == 9101), 0)) {
     return;
   }
   Location loc; loc.x = x; loc.y = y; loc.z = z;
